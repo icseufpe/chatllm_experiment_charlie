@@ -5,6 +5,8 @@ function createMessageId() {
 }
 
 function App() {
+  const [user, setUser] = React.useState(null);
+  const [checkingAuth, setCheckingAuth] = React.useState(true);
   const [sessions, setSessions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [messages, setMessages] = useState([
@@ -27,7 +29,17 @@ function App() {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  // Carrega sessoes ao montar o componente
+  // Verifica autenticacao ao montar
+  useEffect(() => {
+    async function check() {
+      const u = await authMe();
+      setUser(u);
+      setCheckingAuth(false);
+    }
+    check();
+  }, []);
+
+  // Carrega sessoes ao montar o componente (so se autenticado)
   useEffect(() => {
     async function init() {
       try {
@@ -91,6 +103,33 @@ function App() {
     return () => {
       abortControllerRef.current?.abort();
     };
+  }, []);
+
+  const handleAuth = useCallback(async () => {
+    const u = await authMe();
+    setUser(u);
+    // Recarrega sessoes
+    try {
+      const sessionList = await listSessions();
+      if (sessionList.length === 0) {
+        const newSession = await createSession();
+        setSessions([newSession]);
+        setCurrentSessionId(newSession.id);
+      } else {
+        setSessions(sessionList);
+        setCurrentSessionId(sessionList[0].id);
+      }
+    } catch {
+      setLoading(false);
+    }
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    authLogout();
+    setUser(null);
+    setSessions([]);
+    setCurrentSessionId(null);
+    setMessages([]);
   }, []);
 
   const onStop = useCallback(() => {
@@ -230,6 +269,18 @@ function App() {
     }
   };
 
+  if (checkingAuth) {
+    return (
+      <main className="app-shell">
+        <div className="app-loading">Carregando...</div>
+      </main>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage onAuth={handleAuth} />;
+  }
+
   if (loading) {
     return (
       <main className="app-shell">
@@ -251,6 +302,9 @@ function App() {
       <main className="app-shell">
         <header className="app-header">
           <div className="brand">ChatLLM Lab</div>
+          <button className="logout-btn" onClick={handleLogout} title="Sair">
+            Sair
+          </button>
         </header>
 
         <section className="messages" aria-live="polite" ref={messagesRef}>
