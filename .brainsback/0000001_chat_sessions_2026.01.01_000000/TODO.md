@@ -5,14 +5,18 @@
 **Hard rule**: AI agents must not edit this file and must not draft paste-ready content for it.
 
 ## The Problem
-_State clearly what you are trying to achieve and the architectural constraints, avoiding implementation specifics of HOW to do it. Focus on WHAT and WHY._
+O usuário não consegue alternar entre sessões através de uma barra lateral e consequentemente não consegue verificar o histórico em cada sessão, tendo apenas um chat único.
 
 ## Steps
-- [ ] _Decompose the problem into actionable logical steps._
-- [ ] _Each step should represent a verifiable piece of work._
+- [ ] Adicionar ao backend a lógica do histórico, guardando as mensagens numa sessão e organizando as sessões por ordem.
+- [ ] adicionar barra lateral e sua lógica no frontend
+- [ ] Adicionar lógica de Título Automático na barra lateral.
 
 ## Success Looks Like
-- [ ] _Define rigorous, observable criteria for success. E.g., The endpoint returns 200 OK with the user object, NOT Code compiles_
+- [ ] Backend guardar informações do histórico das sessões.
+- [ ] Elemento da barra lateral renderizar na tela.
+- [ ] Título automático a partir da primeira mensagem no chat.
+- [ ] Cada sessão guardar suas próprias mensagens.
 
 ## Notes
 - [ ] _Any specific edge cases, libraries to consider, or potential pitfalls._

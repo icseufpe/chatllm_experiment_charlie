@@ -2,13 +2,19 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from backend.models import ChatMessage
+from backend.models import ChatMessage, ChatSession
 
 
 class TestChatMessage:
     def test_create_message_defaults(self, db_session):
-        """Deve criar uma mensagem com valores padrao para session_key, model e created_at."""
+        """Deve criar uma mensagem com valores padrao para model e created_at."""
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
         msg = ChatMessage(
+            session_id=session.id,
             role="user",
             content="Ola, mundo!",
         )
@@ -17,16 +23,21 @@ class TestChatMessage:
         db_session.refresh(msg)
 
         assert msg.id is not None
-        assert msg.session_key == "default"
+        assert msg.session_id == session.id
         assert msg.role == "user"
         assert msg.content == "Ola, mundo!"
         assert msg.model == "google/gemma-4-31b-it"
         assert isinstance(msg.created_at, datetime)
 
     def test_create_message_custom_session(self, db_session):
-        """Deve criar uma mensagem com session_key customizada."""
+        """Deve criar uma mensagem com session customizada."""
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
         msg = ChatMessage(
-            session_key="session-abc",
+            session_id=session.id,
             role="assistant",
             content="Resposta do assistente.",
         )
@@ -34,12 +45,18 @@ class TestChatMessage:
         db_session.commit()
         db_session.refresh(msg)
 
-        assert msg.session_key == "session-abc"
+        assert msg.session_id == session.id
         assert msg.role == "assistant"
 
     def test_create_message_custom_model(self, db_session):
         """Deve criar uma mensagem com modelo customizado."""
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
         msg = ChatMessage(
+            session_id=session.id,
             role="user",
             content="Teste",
             model="openai/gpt-4o",
@@ -50,16 +67,23 @@ class TestChatMessage:
 
         assert msg.model == "openai/gpt-4o"
 
-    def test_query_by_session_key(self, db_session):
-        """Deve filtrar mensagens por session_key."""
-        msg1 = ChatMessage(session_key="s1", role="user", content="a")
-        msg2 = ChatMessage(session_key="s2", role="user", content="b")
+    def test_query_by_session_id(self, db_session):
+        """Deve filtrar mensagens por session_id."""
+        s1 = ChatSession()
+        s2 = ChatSession()
+        db_session.add_all([s1, s2])
+        db_session.commit()
+        db_session.refresh(s1)
+        db_session.refresh(s2)
+
+        msg1 = ChatMessage(session_id=s1.id, role="user", content="a")
+        msg2 = ChatMessage(session_id=s2.id, role="user", content="b")
         db_session.add_all([msg1, msg2])
         db_session.commit()
 
         results = (
             db_session.query(ChatMessage)
-            .filter(ChatMessage.session_key == "s1")
+            .filter(ChatMessage.session_id == s1.id)
             .all()
         )
         assert len(results) == 1
@@ -67,8 +91,13 @@ class TestChatMessage:
 
     def test_query_by_role(self, db_session):
         """Deve filtrar mensagens pelo campo role."""
-        msg1 = ChatMessage(role="user", content="pergunta")
-        msg2 = ChatMessage(role="assistant", content="resposta")
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
+        msg1 = ChatMessage(session_id=session.id, role="user", content="pergunta")
+        msg2 = ChatMessage(session_id=session.id, role="assistant", content="resposta")
         db_session.add_all([msg1, msg2])
         db_session.commit()
 
@@ -90,8 +119,13 @@ class TestChatMessage:
 
     def test_created_at_auto_set(self, db_session):
         """O campo created_at deve ser preenchido automaticamente com UTC now."""
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
         before = datetime.now(timezone.utc).replace(tzinfo=None)
-        msg = ChatMessage(role="user", content="timestamp test")
+        msg = ChatMessage(session_id=session.id, role="user", content="timestamp test")
         db_session.add(msg)
         db_session.commit()
         db_session.refresh(msg)
@@ -101,8 +135,13 @@ class TestChatMessage:
 
     def test_content_persists_long_text(self, db_session):
         """Deve persistir conteudos longos corretamente."""
+        session = ChatSession()
+        db_session.add(session)
+        db_session.commit()
+        db_session.refresh(session)
+
         long_text = "Lorem ipsum " * 200
-        msg = ChatMessage(role="user", content=long_text)
+        msg = ChatMessage(session_id=session.id, role="user", content=long_text)
         db_session.add(msg)
         db_session.commit()
         db_session.refresh(msg)
