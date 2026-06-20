@@ -119,3 +119,47 @@ async function fetchSession(sessionKey) {
   }
   return response.json();
 }
+
+// Auth endpoints
+async function register({ email, password }) {
+  const response = await fetch(`${API_BASE}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || "Erro no cadastro.");
+  }
+  return response.json();
+}
+
+async function login({ email, password }) {
+  const response = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.detail || "Erro no login.");
+  }
+  return response.json();
+}
+
+async function me(token) {
+  const response = await fetch(`${API_BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) return null;
+  return response.json();
+}
+
+async function logout(token) {
+  await fetch(`${API_BASE}/api/auth/logout`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+// functions are declared in global scope for non-module frontend

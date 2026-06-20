@@ -50,10 +50,10 @@ function SessionItem({ session, active, onSelect, onRename, onDelete }) {
         </div>
       ) : (
         <div className="session-actions">
-          <button type="button" onClick={startRename} aria-label="Renomear sessão">
+          <button type="button" onClick={startRename} aria-label="Renomear sessao">
             ✏️
           </button>
-          <button type="button" onClick={() => onDelete(session.key)} aria-label="Excluir sessão">
+          <button type="button" onClick={() => onDelete(session.key)} aria-label="Excluir sessao">
             🗑️
           </button>
         </div>
@@ -63,327 +63,168 @@ function SessionItem({ session, active, onSelect, onRename, onDelete }) {
 }
 
 function App() {
+  console.log("[App] render start");
   const [sessions, setSessions] = useState([]);
   const [currentSession, setCurrentSession] = useState(null);
   const [sessionKey, setSessionKey] = useState("default");
   const [messages, setMessages] = useState([]);
+  const [token, setToken] = useState(null);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
   const messagesRef = useRef(null);
   const abortControllerRef = useRef(null);
 
-  const chatHistory = useMemo(
-    () => messages.filter((msg) => msg.role === "user" || msg.role === "assistant"),
-    [messages]
-  );
+  const chatHistory = useMemo(() => messages.filter((m) => m.role === "user" || m.role === "assistant"), [messages]);
+
+  useEffect(() => { if (messagesRef.current) messagesRef.current.scrollTop = messagesRef.current.scrollHeight; }, [messages]);
 
   useEffect(() => {
-    const el = messagesRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
-
-  useEffect(() => {
-    return () => {
-      abortControllerRef.current?.abort();
-    };
+    const stored = localStorage.getItem("chat_token");
+    if (stored) {
+      setToken(stored);
+      fetchSessions().then(setSessions).catch(() => {});
+    }
+    return () => abortControllerRef.current?.abort();
   }, []);
 
-  useEffect(() => {
-    fetchLoadSessions();
-  }, []);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-  }, [isDragging, sidebarOpen]);
-
-  const handleSidebarDragStart = (e) => {
-    if (e.clientX > 8) return;
-    setIsDragging(true);
-    e.preventDefault();
+  const handleLogin = (newToken) => {
+    localStorage.setItem("chat_token", newToken);
+    setToken(newToken);
+    fetchSessions().then(setSessions).catch(() => {});
   };
 
-  const handleMainPanelDragStart = (e) => {
-    if (!sidebarOpen && e.clientX < 8) {
-      setIsDragging(true);
-      e.preventDefault();
-    }
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    // Se a sidebar está fechada e o usuário arrasta da esquerda para a direita, abre
-    if (!sidebarOpen && e.clientX > 100) {
-      setSidebarOpen(true);
-      setIsDragging(false);
-    }
-    // Se a sidebar está aberta e o usuário arrasta da esquerda para a esquerda, fecha
-    if (sidebarOpen && e.clientX < 50) {
-      setSidebarOpen(false);
-      setIsDragging(false);
-    }
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const fetchLoadSessions = async () => {
-    try {
-      const loaded = await fetchSessions();
-      setSessions(loaded);
-    } catch (err) {
-      setError(err.message || "Erro ao carregar sessoes.");
-    }
-  };
-
-  const selectSession = async (key, sessionsList = sessions) => {
-    const found = sessionsList.find((session) => session.key === key);
-    if (!found) return;
-
-    setCurrentSession(found);
-    setSessionKey(found.key);
+  const handleLogout = async () => {
+    try { await logout(token); } catch {}
+    localStorage.removeItem("chat_token");
+    setToken(null);
+    setSessions([]);
+    setCurrentSession(null);
     setMessages([]);
-    setError("");
+  };
 
+  const selectSession = async (key) => {
     try {
-      const loadedMessages = await fetchSessionMessages(key);
-      const normalized = loadedMessages.map((msg) => ({
-        id: createMessageId(),
-        role: msg.role,
-        content: msg.content,
-      }));
-      if (normalized.length === 0) {
-        setMessages([
-          {
-            id: createMessageId(),
-            role: "assistant",
-            content: "Sessao carregada. Envie a primeira mensagem para gerar o titulo automatico.",
-          },
-        ]);
-      } else {
-        setMessages(normalized);
-      }
+      const s = await fetchSession(key);
+      setCurrentSession(s);
+      setSessionKey(s.key);
+      const msgs = await fetchSessionMessages(key);
+      setMessages(msgs.map((m) => ({ id: createMessageId(), role: m.role, content: m.content })));
     } catch (err) {
-      setError(err.message || "Erro ao carregar mensagens da sessao.");
+      setError(err.message || "Erro ao carregar sessao");
     }
   };
 
   const addSession = async () => {
     try {
-      const session = await createSession();
-      setSessions((prev) => [session, ...prev]);
-      selectSession(session.key, [session, ...sessions]);
-    } catch (err) {
-      setError(err.message || "Erro ao criar sessao.");
-    }
+      const s = await createSession();
+      setSessions((prev) => [s, ...prev]);
+      await selectSession(s.key);
+    } catch (err) { setError(err.message || "Erro ao criar sessao"); }
   };
 
   const renameSession = async (key, title) => {
-    try {
-      const updated = await updateSession(key, title);
-      setSessions((prev) => prev.map((session) => (session.key === key ? updated : session)));
-      if (currentSession?.key === key) {
-        setCurrentSession(updated);
-      }
-    } catch (err) {
-      setError(err.message || "Erro ao renomear sessao.");
-    }
-  };
-
-  const refreshSession = async (key) => {
-    try {
-      const updated = await fetchSession(key);
-      setCurrentSession(updated);
-      setSessions((prev) => prev.map((session) => (session.key === key ? updated : session)));
-    } catch {
-      // Ignore errors during refresh.
-    }
+    try { const updated = await updateSession(key, title); setSessions((p) => p.map((s) => s.key === key ? updated : s)); if (currentSession?.key === key) setCurrentSession(updated); } catch (err) { setError(err.message || "Erro ao renomear"); }
   };
 
   const removeSession = async (key) => {
-    if (!window.confirm("Excluir sessao?")) return;
-    try {
-      await deleteSession(key);
-      const nextSessions = sessions.filter((session) => session.key !== key);
-      setSessions(nextSessions);
-      if (currentSession?.key === key) {
-        setCurrentSession(null);
-        setSessionKey("default");
-        setMessages([]);
-      }
-    } catch (err) {
-      setError(err.message || "Erro ao excluir sessao.");
-    }
+    if (!confirm("Excluir sessao?")) return;
+    try { await deleteSession(key); setSessions((p) => p.filter((s) => s.key !== key)); if (currentSession?.key === key) { setCurrentSession(null); setMessages([]); } } catch (err) { setError(err.message || "Erro ao deletar"); }
   };
 
-  const onStop = () => {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setBusy(false);
-  };
+  const onStop = () => { abortControllerRef.current?.abort(); abortControllerRef.current = null; setBusy(false); };
 
-  const onSubmit = async (event, inputRef) => {
-    event.preventDefault();
+  const onSubmit = async (e) => {
+    e.preventDefault();
     const cleaned = text.trim();
     if (!cleaned || busy) return;
 
-    // Se não tem sessão, cria uma automaticamente
-    let session = currentSession;
-    let finalSessionKey = sessionKey;
-    if (!session) {
-      try {
-        session = await createSession();
-        setSessions((prev) => [session, ...prev]);
-        setCurrentSession(session);
-        finalSessionKey = session.key;
-        setSessionKey(session.key);
-      } catch (err) {
-        setError(err.message || "Erro ao criar sessao.");
-        return;
-      }
+    let finalKey = sessionKey;
+    if (!currentSession) {
+      try { const s = await createSession(); setSessions((p) => [s, ...p]); setCurrentSession(s); finalKey = s.key; setSessionKey(s.key); } catch (err) { setError(err.message || "Erro ao criar sessao"); return; }
     }
 
-    setError("");
-    const userMessage = { id: createMessageId(), role: "user", content: cleaned };
-    const assistantMessageId = createMessageId();
-
-    setMessages((prev) => [
-      ...prev,
-      userMessage,
-      { id: assistantMessageId, role: "assistant", content: "" },
-    ]);
+    const userMsg = { id: createMessageId(), role: "user", content: cleaned };
+    const assistantId = createMessageId();
+    setMessages((p) => [...p, userMsg, { id: assistantId, role: "assistant", content: "" }]);
     setText("");
     setBusy(true);
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
+    const controller = new AbortController(); abortControllerRef.current = controller;
 
     try {
-      await sendMessageStream({
-        message: cleaned,
-        sessionKey: finalSessionKey,
-        history: chatHistory,
-        signal: abortController.signal,
-        onDelta: (delta) => {
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? { ...msg, content: `${msg.content}${delta}` }
-                : msg
-            )
-          );
-        },
-      });
-
-      await refreshSession(finalSessionKey);
-
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === assistantMessageId && !msg.content.trim()
-            ? { ...msg, content: "Nao foi possivel obter resposta do modelo agora." }
-            : msg
-        )
-      );
+      await sendMessageStream({ message: cleaned, sessionKey: finalKey, history: chatHistory, signal: controller.signal, onDelta: (delta) => {
+        setMessages((p) => p.map((m) => m.id === assistantId ? { ...m, content: `${m.content}${delta}` } : m));
+      }});
     } catch (err) {
-      const aborted = err?.name === "AbortError";
-      if (!aborted) {
-        setError(err.message || "Falha inesperada ao gerar resposta.");
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId
-              ? { ...msg, content: msg.content.trim() ? msg.content : "Nao foi possivel obter resposta do modelo agora." }
-              : msg
-          )
-        );
-      } else {
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId && !msg.content.trim()
-              ? { ...msg, content: "Resposta interrompida." }
-              : msg
-          )
-        );
-      }
+      const aborted = err?.name === 'AbortError';
+      if (!aborted) setError(err.message || 'Erro ao enviar');
+      setMessages((p) => p.map((m) => m.id === assistantId && !m.content.trim() ? { ...m, content: aborted ? 'Resposta interrompida.' : 'Falha ao gerar resposta.' } : m));
     } finally {
-      abortControllerRef.current = null;
-      setBusy(false);
+      abortControllerRef.current = null; setBusy(false);
     }
   };
 
+  if (!token) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2>Por favor, faça login</h2>
+        <Login onLogin={handleLogin} />
+      </div>
+    );
+  }
+
   return (
-    <main className={`app-shell ${sidebarOpen ? "" : "sidebar-collapsed"}`} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseDown={handleMainPanelDragStart}>
-      <button type="button" className="sidebar-menu-button" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu">
-        ☰
-      </button>
-      <aside className="sidebar" onMouseDown={handleSidebarDragStart}>
+    <div className={`app-shell ${sessions.length === 0 ? 'sidebar-collapsed' : ''}`}>
+      <aside className="sidebar">
         <div className="sidebar-header">
           <div>
-            <div className="sidebar-title">Sessões</div>
-            <div className="sidebar-subtitle">Gerencie seus chats</div>
+            <div className="sidebar-title">Sessoes</div>
+            <div className="sidebar-subtitle">ChatLLM Lab</div>
           </div>
-          <button type="button" className="button-secondary" onClick={addSession}>
-            + Nova
-          </button>
+          <div>
+            <button className="button-secondary" onClick={addSession}>Nova</button>
+            <button className="button-secondary" onClick={handleLogout} style={{ marginLeft: 8 }}>Sair</button>
+          </div>
         </div>
-
         <ul className="sessions-list">
-          {sessions.map((session) => (
-            <SessionItem
-              key={session.key}
-              session={session}
-              active={currentSession?.key === session.key}
-              onSelect={selectSession}
-              onRename={renameSession}
-              onDelete={removeSession}
-            />
+          {sessions.map((s) => (
+            <SessionItem key={s.key} session={s} active={currentSession?.key === s.key} onSelect={selectSession} onRename={renameSession} onDelete={removeSession} />
           ))}
         </ul>
       </aside>
 
-      <section className="main-panel">
-        <header className="panel-header">
+      <main className="main-panel">
+        <div className="panel-header">
           <div>
-            <div className="panel-title">
-              {currentSession ? currentSession.title || "New session" : "Nenhuma sessão selecionada"}
-            </div>
-            {currentSession?.title_generated ? <div className="panel-badge">Título automático</div> : null}
+            <div className="panel-title">{currentSession?.title || 'Sem sessao selecionada'}</div>
+            {currentSession?.title_generated && <div className="panel-badge">Título automático</div>}
           </div>
-        </header>
+        </div>
 
-        {error && <div className="note error">{error}</div>}
-
-        <section className="messages" aria-live="polite" ref={messagesRef}>
+        <div className="messages" ref={messagesRef}>
           <div className="messages-inner">
-            {messages.map((msg) => (
-              <article key={msg.id} className={`bubble ${msg.role}`}>
-                <MessageContent content={msg.content} />
-              </article>
+            {messages.map((m) => (
+              <div key={m.id} className={`bubble ${m.role === 'user' ? 'user' : 'assistant'}`}>
+                <MessageContent content={m.content} />
+              </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        <Composer
-          text={text}
-          busy={busy}
-          error={error}
-          onChangeText={setText}
-          onSubmit={onSubmit}
-          onStop={onStop}
-        />
-      </section>
-    </main>
+        <Composer text={text} busy={busy} error={error} onChangeText={setText} onSubmit={onSubmit} onStop={onStop} />
+      </main>
+    </div>
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+window.App = App;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('root');
+  if (root && window.ReactDOM && window.React) {
+    ReactDOM.createRoot(root).render(React.createElement(App));
+  }
+});
+
+console.log('[App] script loaded');
 
