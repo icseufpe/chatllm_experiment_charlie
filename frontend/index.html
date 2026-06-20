@@ -56,22 +56,220 @@
       .app-shell {
         width: 100%;
         height: 100%;
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        grid-template-rows: 100%;
+        gap: 0;
+        position: relative;
+        transition: grid-template-columns 300ms ease;
+      }
+
+      .app-shell.sidebar-collapsed {
+        grid-template-columns: 0 1fr;
+      }
+
+      .app-shell.sidebar-collapsed::after {
+        content: '';
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
+        z-index: 5;
+        background: transparent;
+      }
+
+      .app-shell.sidebar-collapsed::after:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      .sidebar {
         display: flex;
         flex-direction: column;
+        border-right: 2px solid #d1d5db;
+        background: #fafafa;
+        width: 220px;
+        overflow: hidden;
+        position: relative;
+        user-select: none;
       }
 
-      .app-header {
-        flex-shrink: 0;
-        padding: 12px 24px;
-        border-bottom: 1px solid var(--border);
-        text-align: center;
+      .sidebar::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 8px;
+        height: 100%;
+        cursor: ew-resize;
+        z-index: 20;
+        background: transparent;
       }
 
-      .brand {
-        font-weight: 600;
-        font-size: 0.95rem;
+      .sidebar::before:hover {
+        background: rgba(0, 0, 0, 0.05);
+      }
+
+      .sidebar-menu-button {
+        display: none;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--border);
+        background: #ffffff;
+        border-radius: 6px;
+        cursor: pointer;
+        align-items: center;
+        justify-content: center;
         color: var(--text);
-        letter-spacing: 0;
+        font-size: 20px;
+        z-index: 15;
+        padding: 0;
+      }
+
+      .sidebar-menu-button:hover {
+        background: #f5f5f5;
+      }
+
+      .app-shell.sidebar-collapsed .sidebar-menu-button {
+        display: flex;
+      }
+
+      .sidebar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .sidebar-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        margin-bottom: 2px;
+      }
+
+      .sidebar-subtitle {
+        font-size: 0.82rem;
+        color: var(--muted);
+      }
+
+      .sessions-list {
+        flex: 1;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        overflow-y: auto;
+      }
+
+      .session-item {
+        border-bottom: 1px solid #f0f0f0;
+      }
+
+      .session-item.active {
+        background: #f0f5ff;
+      }
+
+      .session-select {
+        width: 100%;
+        padding: 14px 16px;
+        background: transparent;
+        border: none;
+        text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        cursor: pointer;
+      }
+
+      .session-title-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .session-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
+
+      .session-badge {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: #e8f1ff;
+        color: #1a3c8f;
+      }
+
+      .session-actions,
+      .session-inline-edit {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px 14px;
+      }
+
+      .session-actions button,
+      .session-inline-edit button {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: transparent;
+        padding: 6px 10px;
+        cursor: pointer;
+      }
+
+      .session-inline-edit input {
+        flex: 1;
+        padding: 8px 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font: inherit;
+        background: white;
+      }
+
+      .main-panel {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        min-width: 0;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 20px 24px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .panel-title {
+        font-size: 1rem;
+        font-weight: 700;
+      }
+
+      .panel-badge {
+        margin-top: 6px;
+        font-size: 0.75rem;
+        color: #1a3c8f;
+      }
+
+      .button-secondary {
+        border: 1px solid var(--border);
+        background: #ffffff;
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 16px;
+        cursor: pointer;
+      }
+
+      .button-secondary:hover {
+        background: #f5f5f5;
       }
 
       .messages {
@@ -192,19 +390,6 @@
         border-bottom: 1px solid #fed7d7;
       }
 
-      .composer {
-        max-width: 720px;
-        margin: 0 auto;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--composer-bg);
-        border: 1px solid var(--composer-border);
-        border-radius: 28px;
-        padding: 8px 10px 8px 18px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        transition: border-color 150ms ease, box-shadow 150ms ease;
-      }
 
       .composer:focus-within {
         border-color: #b0b0b0;

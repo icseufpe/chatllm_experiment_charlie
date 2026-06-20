@@ -5,17 +5,36 @@
 **Hard rule**: AI agents must not edit this file and must not draft paste-ready content for it.
 
 ## The Problem
-_State clearly what you are trying to achieve and the architectural constraints, avoiding implementation specifics of HOW to do it. Focus on WHAT and WHY._
+_Implementar sessões  de chat e título em uma barra lateral, de forma que o usuário consiga criar novas sessões, alternar entre elas, renomear e deletar elas._
+
 
 ## Steps
-- [ ] _Decompose the problem into actionable logical steps._
-- [ ] _Each step should represent a verifiable piece of work._
+- [ ] _Criar sessões._
+- [ ] _Listar sessões._
+- [ ] _Obter  sessão por id._
+- [ ] _Editar sessão._
+- [ ] _excluir sessão._
+- [ ] _Postar mensagem em sessão._
 
 ## Success Looks Like
-- [ ] _Define rigorous, observable criteria for success. E.g., The endpoint returns 200 OK with the user object, NOT Code compiles_
+- [ ] _Criar sessão adiciona um item na barra lateral._
+- [ ] _Deletar sessão remove o item da barra lateral._
+- [ ] _Ao clicar em uma sessão, o chat dessa sessão é exibido._
+- [ ] _Ao renomear, o usuário acessa um campo de digitação para alterar o nome._
+- [ ] _Se a sessão não tiver título manual, o título é criado com base na primeira mensagem._
+- [ ] _Ao alternar de sessão, a tela mostra o chat da sessão selecionada._
+- [ ] _O histórico de cada sessão é preservado separadamente._
+- [ ] _O badge “Automático” aparece quando o título foi gerado automaticamente._
+- [ ] _Erros de salvamento ou de geração de título são exibidos ao usuário._
 
 ## Notes
-- [ ] _Any specific edge cases, libraries to consider, or potential pitfalls._
+- [ ] _O usuário não pode manter mais de 100 sessões._
+- [ ] _O título automático gerado não deve  retornar algo vazio ou ofensivo._
+- [ ] _Prompts vazios não podem ser enviados._
+- [ ] _Caso o usuário renomeie uma sessão antes de utilizar ela, a criação automática não deve sobrescrever._
+- [ ] _Duas requisições concorrentes alteram a mesma sessão ou enviam mensagens na mesma sessão. Isso deve ser administrado utilizando uma fila de alterações_
+- [ ] _A exclusão deve ser soft. Ou seja, uma sessão deletada deve ser enviada incialmente para lixeira e lá há a opção de deletar permanentemente ou automaticamente após 15 dias._
+- [ ] _A aplicação deve notiificar o usuário  quanto a erros ao salvar nome, mensagem ou aoo tentar gerar titulo automático._
 
 ---
 **⚠️ HUMAN ONLY**: This file is your strategic space. AI agents must not edit it.
